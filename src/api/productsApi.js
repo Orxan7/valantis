@@ -11,7 +11,7 @@ async function getProductIds(params) {
         return [];
     }
 
-    const response = await fetch('http://api.valantis.store:40000/', {
+    const response = await fetch('https://api.valantis.store:41000/', {
         method: 'POST',
         headers: {
             'X-Auth': authString,
@@ -34,7 +34,7 @@ async function getProductIds(params) {
 async function getProductsByIds(ids) {
 
     try {
-        const response = await fetch('http://api.valantis.store:40000/', {
+        const response = await fetch('https://api.valantis.store:41000/', {
             method: 'POST',
             headers: {
                 'X-Auth': authString,
