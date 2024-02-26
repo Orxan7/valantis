@@ -51,7 +51,6 @@ async function getProductsByIds(ids) {
         }
 
         const data = await response.json();
-        console.log(data)
         return data.result;
     } catch (error) {
         console.error(error);

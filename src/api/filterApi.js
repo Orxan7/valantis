@@ -11,8 +11,6 @@ async function getFilteredProductIds(params) {
     if (params.name) filteredParams["product"] = params.name;
     if (params.brand) filteredParams["brand"] = params.brand;
 
-    console.log(filteredParams)
-
     const body = JSON.stringify({
         action: "filter",
         params: filteredParams
@@ -33,7 +31,6 @@ async function getFilteredProductIds(params) {
         }
 
         const data = await response.json();
-        console.log(data);
 
         return data.result;
     } catch (error) {
