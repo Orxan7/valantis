@@ -6,7 +6,11 @@ const authString = md5(`${password}_${timestamp}`);
 
 
 async function getProductIds(params) {
-    console.log(params)
+    if (typeof params.offset !== 'number' || typeof params.limit !== 'number') {
+        console.warn('getProductIds: Неверные параметры');
+        return [];
+    }
+
     const response = await fetch('http://api.valantis.store:40000/', {
         method: 'POST',
         headers: {
@@ -28,25 +32,31 @@ async function getProductIds(params) {
 }
 
 async function getProductsByIds(ids) {
-    const response = await fetch('http://api.valantis.store:40000/', {
-        method: 'POST',
-        headers: {
-            'X-Auth': authString,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            "action": "get_items",
-            "params": {"ids": ids}
-        }),
-    });
 
-    if (!response.ok) {
-        throw new Error('Ошибка при получении информации о товарах');
+    try {
+        const response = await fetch('http://api.valantis.store:40000/', {
+            method: 'POST',
+            headers: {
+                'X-Auth': authString,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                "action": "get_items",
+                "params": { "ids": ids }
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Ошибка при получении информации о товарах');
+        }
+
+        const data = await response.json();
+        console.log(data)
+        return data.result;
+    } catch (error) {
+        console.error(error);
+        return [];
     }
-
-    const data = await response.json();
-    console.log(data)
-    return data.result;
 }
 
 export { getProductIds, getProductsByIds };

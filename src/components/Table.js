@@ -7,8 +7,9 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
-import { TablePagination } from '@mui/material';
+import { LinearProgress, TablePagination } from '@mui/material';
 import { getProductIds, getProductsByIds } from '../api/productsApi';
+import { getFilteredProductIds } from '../api/filterApi';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
     [`&.${tableCellClasses.head}`]: {
@@ -29,47 +30,52 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
     },
 }));
 
-function CustomizedTables() {
+function CustomizedTables({ filters }) {
     const [page, setPage] = useState(0);
     const [rowsPerPage] = useState(50);
-    const [offset, setOffset] = useState(0);
     const [allRows, setAllRows] = useState([]);
+    const [filteredRows, setFilteredRows] = useState([]);
     const [displayRows, setDisplayRows] = useState([]);
-
-
-    const handleChangePage = (event, newPage) => {
-        const newOffset = newPage * rowsPerPage;
-        setOffset(newOffset);
-        setPage(newPage);
-        setDisplayRows(allRows.slice(newOffset, newOffset + rowsPerPage));
-    };
-
 
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                if (allRows.length <= offset + rowsPerPage) {
-                    const ids = await getProductIds({ offset: allRows.length, limit: 100});
-                    const uniqueIds = ids.filter(id => !allRows.find(row => row.id === id));
-                    const productsData = await getProductsByIds(uniqueIds);
-                    const newAllRows = [...allRows, ...productsData].reduce((acc, current) => {
-                        const x = acc.find(item => item.id === current.id);
-                        if (!x) {
-                            return acc.concat([current]);
-                        } else {
-                            return acc;
-                        }
-                    }, []);
-                    setAllRows(newAllRows);
+                let ids;
+                if (Object.values(filters).some(filter => filter)) {
+                    ids = await getFilteredProductIds(filters);
+                } else {
+                    ids = await getProductIds({ offset: page * rowsPerPage, limit: 100 });
                 }
-                setDisplayRows(allRows.slice(offset, offset + rowsPerPage));
+                if (ids.length > 0) {
+                    const productsData = await getProductsByIds(ids);
+                    const newData = productsData.reduce((acc, current) => {
+                        if (!acc.find(item => item.id === current.id)) {
+                            acc.push(current);
+                        }
+                        return acc;
+                    }, []);
+                    if (Object.values(filters).some(filter => filter)) {
+                        setFilteredRows(newData);
+                    } else {
+                        setAllRows(prev => [...prev, ...newData]);
+                    }
+                }
             } catch (error) {
                 console.error("Fetching error:", error);
             }
         };
-
         fetchProducts();
-    }, [offset, allRows]);
+    }, [page, filters]);
+
+    useEffect(() => {
+        const rowsToDisplay = Object.values(filters).some(filter => filter) ? filteredRows : allRows;
+        setDisplayRows(rowsToDisplay.slice(page * rowsPerPage, (page + 1) * rowsPerPage));
+    }, [page, filteredRows, allRows]);
+
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
 
 
     return (
@@ -84,23 +90,30 @@ function CustomizedTables() {
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {displayRows.map((row) => (
-                        <StyledTableRow key={row.id}>
-                            <StyledTableCell component="th" scope="row">
-                                {row.id}
-                            </StyledTableCell>
-                            <StyledTableCell align="right">{row.product}</StyledTableCell>
-                            <StyledTableCell align="right">{row.price}</StyledTableCell>
-                            <StyledTableCell align="right">{row.brand}</StyledTableCell>
-                        </StyledTableRow>
-                    ))}
+                    {displayRows.length === 0 ? (
+                        <TableRow>
+                            <TableCell colSpan={4} style={{ padding: 0 }}>
+                                <LinearProgress color="inherit" style={{ width: '100%' }} />
+                            </TableCell>
+                        </TableRow>
+                    ) : (
+                        displayRows.map((row, index) => (
+                            <StyledTableRow key={`${row.id}-${index}`}>
+                                <StyledTableCell component="th" scope="row">
+                                    {row.id}
+                                </StyledTableCell>
+                                <StyledTableCell align="right">{row.product}</StyledTableCell>
+                                <StyledTableCell align="right">{row.price}</StyledTableCell>
+                                <StyledTableCell align="right">{row.brand}</StyledTableCell>
+                            </StyledTableRow>
+                        ))
+                    )}
                 </TableBody>
-
             </Table>
             <TablePagination
                 rowsPerPageOptions={[50]}
                 component="div"
-                count={-1}
+                count={Object.values(filters).some(filter => filter) ? filteredRows.length : allRows.length}
                 rowsPerPage={rowsPerPage}
                 page={page}
                 onPageChange={handleChangePage}
@@ -110,3 +123,4 @@ function CustomizedTables() {
 }
 
 export default CustomizedTables;
+
